@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: lkthink_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lkthink
+      POSTGRES_USER: lkthink
+      POSTGRES_PASSWORD: lkthink_dev
+    ports:
+      - '5442:5432'
+    volumes:
+      - lkthink_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lkthink -d lkthink']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  lkthink_postgres_data:

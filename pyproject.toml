@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lkthink-agent"
+version = "0.1.0"
+description = "Extensible Cognitive Agent Engine"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = [
+    "agno>=3.2.1,<4.0",
+    "openai>=1.0",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0",
+    
+]
+
+[project.optional-dependencies]
+postgres = [
+    "sqlalchemy[asyncio]",
+    "psycopg[binary]",
+    "pgvector",
+    "sqlalchemy>=2.0",
+]
+
+api = [
+    "fastapi",
+    "uvicorn[standard]"
+]
+
+knowledge = [
+    "aiohttp",
+    "pypdf"
+]
+
+mcp = [
+    "mcp>=1.12.3,<2.0"
+]
+
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "build"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"

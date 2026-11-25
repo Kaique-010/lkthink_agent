@@ -1,0 +1,108 @@
+
+# ==========================================
+# LKThink Agent - Git Ignore
+# ==========================================
+
+# --- Environment / Secrets ---
+.env
+.env.*
+!.env.example
+!.env.test.example
+!.env.docker.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+secrets.json
+credentials.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+.python-version.local
+
+# --- Python packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+test-results/
+junit.xml
+
+# --- Linters / Type checking ---
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+.pytype/
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.sublime-workspace
+*.swp
+*.swo
+
+# --- Operating systems ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Logs / Observability ---
+*.log
+logs/
+observability_output/
+telemetry_output/
+
+# --- Local databases ---
+*.sqlite
+*.sqlite3
+*.db
+postgres_data/
+pgdata/
+docker/postgres/data/
+
+# --- Docker local overrides ---
+docker-compose.override.yml
+compose.override.yaml
+
+# --- Temporary files ---
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*.rej
+~*
+
+# --- Node (caso adicionemos frontend) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Documentation generated locally ---
+docs/_build/
+site/
