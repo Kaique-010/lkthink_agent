@@ -1,9 +1,10 @@
+
 from __future__ import annotations
 
 import json
 import threading
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lkthink_agent.observability.config import ObservabilityConfig
 from lkthink_agent.observability.events import (
@@ -13,8 +14,10 @@ from lkthink_agent.observability.events import (
     criar_evento,
 )
 from lkthink_agent.observability.exporters.console import ConsoleExporter
-from lkthink_agent.observability.exporters.postgres import PostgresExporter
 from lkthink_agent.observability.sanitization import sanitizar_valor
+
+if TYPE_CHECKING:
+    from lkthink_agent.observability.exporters.postgres import PostgresExporter
 
 
 class EventLogger:
@@ -25,7 +28,7 @@ class EventLogger:
     - Criar eventos padronizados.
     - Capturar contexto da execução.
     - Sanitizar dados sensíveis.
-    - Exportar logs para console e JSONL.
+    - Exportar logs para console, JSONL e PostgreSQL.
     """
 
     def __init__(
@@ -34,37 +37,54 @@ class EventLogger:
         console_exporter: ConsoleExporter | None = None,
         json_file: str | Path | None = None,
         postgres_exporter: PostgresExporter | None = None,
-    ):
+    ) -> None:
         self.config = config or ObservabilityConfig()
 
-        if console_exporter is None and self.config.console_enabled:
-            from lkthink_agent.observability.exporters.console import (
-                ConsoleExporter,
-            )
-
-        if postgres_exporter is None and self.config.postgres_enabled:
-            from lkthink_agent.observability.exporters.postgres import (
-                PostgresExporter,
-            )
-            postgres_exporter = PostgresExporter(self.config)
-
-        self.postgres_exporter = postgres_exporter
-
-        if console_exporter is None and self.config.console_enabled:
-            console_exporter = ConsoleExporter(self.config)
+        self._lock = threading.RLock()
 
         self.console_exporter = console_exporter
+        self.postgres_exporter = postgres_exporter
+
+        if self.console_exporter is None and self.config.console_enabled:
+            self.console_exporter = ConsoleExporter(self.config)
+
+        if self.postgres_exporter is None and self.config.postgres_enabled:
+            self._inicializar_postgres()
 
         self.json_file = Path(
             json_file
-            or getattr(
-                self.config,
-                "json_file",
-                "logs/lkthink-agent.jsonl",
-            )
+            or self.config.json_file
         )
 
-        self._lock = threading.RLock()
+    def _inicializar_postgres(self) -> None:
+        """
+        Carrega o exporter PostgreSQL somente quando solicitado.
+
+        SQLAlchemy permanece como dependência opcional.
+        """
+        if not self.config.postgres_url:
+            raise ValueError(
+                "postgres_url é obrigatória quando "
+                "postgres_enabled=True."
+            )
+
+        try:
+            from lkthink_agent.observability.exporters.postgres import (
+                PostgresExporter,
+            )
+        except ImportError as erro:
+            raise ImportError(
+                "O exporter PostgreSQL exige dependências adicionais. "
+                "Instale com: pip install lkthink-agent[postgres]"
+            ) from erro
+
+        exporter = PostgresExporter(
+            database_url=self.config.postgres_url,
+        )
+
+        exporter.initialize()
+
+        self.postgres_exporter = exporter
 
     def emit(
         self,
@@ -126,16 +146,10 @@ class EventLogger:
                 self.postgres_exporter.export(evento)
 
     def _exportar_console(self, evento: dict[str, Any]) -> None:
-        """Envia o evento para o renderizador do terminal."""
-
-        if self.console_exporter is None:
-            return
-
-        self.console_exporter.export(evento)
+        if self.console_exporter is not None:
+            self.console_exporter.export(evento)
 
     def _exportar_json(self, evento: dict[str, Any]) -> None:
-        """Grava o evento em formato JSON Lines."""
-
         self.json_file.parent.mkdir(
             parents=True,
             exist_ok=True,

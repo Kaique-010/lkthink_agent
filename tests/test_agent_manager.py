@@ -164,3 +164,97 @@ async def test_propagacao_de_erro_na_execucao(manager, runtime):
             "agent-001",
             "Teste",
         )
+
+
+@pytest.mark.asyncio
+async def test_remove_and_close_agente(manager):
+    agent = criar_agente()
+    manager.register(agent)
+
+    resultado = await manager.remove_and_close("agent-001")
+
+    assert resultado is agent
+    agent.close.assert_awaited_once()
+
+    assert len(manager) == 0
+    assert not manager.exists("agent-001")
+    assert not manager.exists("agente-teste")
+
+
+@pytest.mark.asyncio
+async def test_remove_and_close_preserva_registro_se_falhar(manager):
+    agent = criar_agente()
+    agent.close.side_effect = RuntimeError("Falha ao fechar MCP")
+
+    manager.register(agent)
+
+    with pytest.raises(RuntimeError, match="Falha ao fechar MCP"):
+        await manager.remove_and_close("agent-001")
+
+    assert manager.get("agent-001") is agent
+    assert len(manager) == 1
+
+
+@pytest.mark.asyncio
+async def test_close_all_fecha_todos_os_agentes(manager):
+    agent_1 = criar_agente("agent-001", "agente-um")
+    agent_2 = criar_agente("agent-002", "agente-dois")
+
+    manager.register(agent_1)
+    manager.register(agent_2)
+
+    await manager.close_all()
+
+    agent_1.close.assert_awaited_once()
+    agent_2.close.assert_awaited_once()
+
+    assert len(manager) == 0
+    assert manager.list_agents() == ()
+
+
+@pytest.mark.asyncio
+async def test_close_all_continua_mesmo_com_falha(manager):
+    agent_1 = criar_agente("agent-001", "agente-um")
+    agent_2 = criar_agente("agent-002", "agente-dois")
+
+    agent_1.close.side_effect = RuntimeError("Falha no primeiro agente")
+
+    manager.register(agent_1)
+    manager.register(agent_2)
+
+    with pytest.raises(ExceptionGroup):
+        await manager.close_all()
+
+    agent_1.close.assert_awaited_once()
+    agent_2.close.assert_awaited_once()
+
+    assert len(manager) == 0
+
+
+def test_busca_agente_com_espacos(manager):
+    agent = criar_agente()
+    manager.register(agent)
+
+    assert manager.get("  agent-001  ") is agent
+    assert manager.get("  agente-teste  ") is agent
+    assert manager.exists("  agent-001  ")
+    assert manager.exists("  agente-teste  ")
+
+
+def test_rejeita_identificador_nao_normalizado(manager):
+    agent = criar_agente(
+        agent_id=" agent-001 ",
+        slug="agente-teste",
+    )
+
+    with pytest.raises(ValueError, match="normalizados"):
+        manager.register(agent)
+
+    assert len(manager) == 0
+
+
+def test_exists_rejeita_identificador_invalido(manager):
+    assert not manager.exists("")
+    assert not manager.exists("   ")
+    assert not manager.exists(None)
+    assert not manager.exists(123)

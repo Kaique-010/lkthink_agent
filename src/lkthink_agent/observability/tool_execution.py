@@ -1,11 +1,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any, Iterator
-from contextlib import contextmanager
+from typing import Any
 
 from lkthink_agent.observability.events import EventName
 from lkthink_agent.observability.logger import EventLogger
@@ -86,7 +87,7 @@ def observar_ferramenta(
         component="tool",
         operation="call",
         metadata=metadata,
-    ) as span:
+    ):
 
         observador.logger.info(
             EventName.TOOL_CALL_STARTED,

@@ -13,7 +13,7 @@ class AgentConfig:
     color: str = "blue"
     markdown: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         campos = {
             "id": self.id,
             "slug": self.slug,
@@ -23,5 +23,16 @@ class AgentConfig:
         }
 
         for campo, valor in campos.items():
-            if not valor or not valor.strip():
-                raise ValueError(f"{campo} não pode ser vazio.")
+            if not isinstance(valor, str):
+                raise TypeError(
+                    f"{campo} precisa ser uma string."
+                )
+
+            if not valor.strip():
+                raise ValueError(
+                    f"{campo} não pode ser vazio."
+                )
+
+        # Identificadores devem ser armazenados de forma canônica.
+        object.__setattr__(self, "id", self.id.strip())
+        object.__setattr__(self, "slug", self.slug.strip())

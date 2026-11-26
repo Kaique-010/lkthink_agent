@@ -17,5 +17,18 @@ services:
       timeout: 5s
       retries: 10
 
+  package-check:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: lkthink_package_check
+    profiles:
+      - validation
+    environment:
+      DATABASE_URL: postgresql+psycopg://lkthink:lkthink_dev@postgres:5432/lkthink
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   lkthink_postgres_data:

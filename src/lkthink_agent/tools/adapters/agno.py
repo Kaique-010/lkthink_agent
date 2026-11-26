@@ -1,13 +1,14 @@
 
+from collections.abc import Callable
 from functools import wraps
 from inspect import iscoroutinefunction
-from typing import Any, Callable
+from typing import Any
 
 from agno.tools.function import Function
 
 from lkthink_agent.observability.tool_execution import (
-    obter_observador,
     observar_ferramenta,
+    obter_observador,
 )
 from lkthink_agent.tools.registry import ToolRegistry
 

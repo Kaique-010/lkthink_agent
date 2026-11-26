@@ -12,9 +12,6 @@ from sqlalchemy.engine import Engine
 class PostgresExporter:
     """
     Exportador de eventos de observabilidade para PostgreSQL.
-
-    Utiliza JSONB para preservar o evento completo e colunas
-    relacionais para facilitar consultas e dashboards.
     """
 
     TABLE_NAME = "lkthink_agent_events"
@@ -27,13 +24,13 @@ class PostgresExporter:
         fail_silently: bool = True,
     ) -> None:
         if not database_url and engine is None:
-            raise ValueError("A URL do PostgreSQL é obrigatória.")
+            raise ValueError(
+                "Informe database_url ou uma instância de Engine."
+            )
 
         self.engine = engine or create_engine(
             database_url,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
         )
 
         self.fail_silently = fail_silently
@@ -43,7 +40,8 @@ class PostgresExporter:
     def initialize(self) -> None:
         """Cria a estrutura de persistência, caso ainda não exista."""
 
-        sql = text("""
+        comandos = (
+            """
             CREATE TABLE IF NOT EXISTS lkthink_agent_events (
                 id BIGSERIAL PRIMARY KEY,
                 timestamp TIMESTAMPTZ NOT NULL,
@@ -64,26 +62,29 @@ class PostgresExporter:
                 metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
                 error JSONB,
                 payload JSONB NOT NULL
-            );
-
+            )
+            """,
+            """
             CREATE INDEX IF NOT EXISTS idx_lkthink_events_trace
-                ON lkthink_agent_events (trace_id);
-
+            ON lkthink_agent_events (trace_id)
+            """,
+            """
             CREATE INDEX IF NOT EXISTS idx_lkthink_events_run
-                ON lkthink_agent_events (run_id);
-
+            ON lkthink_agent_events (run_id)
+            """,
+            """
             CREATE INDEX IF NOT EXISTS idx_lkthink_events_agent
-                ON lkthink_agent_events (agent_id);
-
+            ON lkthink_agent_events (agent_id)
+            """,
+            """
             CREATE INDEX IF NOT EXISTS idx_lkthink_events_timestamp
-                ON lkthink_agent_events (timestamp DESC);
-
-            CREATE INDEX IF NOT EXISTS idx_lkthink_events_event
-                ON lkthink_agent_events (event);
-        """)
+            ON lkthink_agent_events (timestamp DESC)
+            """,
+        )
 
         with self._lock, self.engine.begin() as connection:
-            connection.execute(sql)
+            for comando in comandos:
+                connection.execute(text(comando))
 
         self._initialized = True
 
@@ -96,20 +97,16 @@ class PostgresExporter:
         )
 
     def export(self, evento: dict[str, Any]) -> None:
-        """Persiste um evento sanitizado."""
-
         if not self._initialized:
             raise RuntimeError(
-                "PostgresExporter não inicializado. "
-                "Execute initialize() antes de exportar."
+                "PostgresExporter não foi inicializado."
             )
 
         agent = evento.get("agent") or {}
+        error = evento.get("error")
 
-        if not isinstance(agent, dict):
-            agent = {}
-
-        sql = text("""
+        sql = text(
+            """
             INSERT INTO lkthink_agent_events (
                 timestamp,
                 level,
@@ -150,44 +147,36 @@ class PostgresExporter:
                 CAST(:error AS JSONB),
                 CAST(:payload AS JSONB)
             )
-        """)
+            """
+        )
 
         parametros = {
-            "timestamp": evento["timestamp"],
+            "timestamp": evento.get("timestamp"),
             "level": evento.get("level"),
-            "event": str(evento["event"]),
+            "event": evento.get("event") or "unknown",
             "message": evento.get("message"),
             "trace_id": evento.get("trace_id"),
             "run_id": evento.get("run_id"),
             "span_id": evento.get("span_id"),
             "parent_span_id": evento.get("parent_span_id"),
             "tenant_id": evento.get("tenant_id"),
-            "agent_id": agent.get("id"),
-            "agent_name": agent.get("name"),
+            "agent_id": agent.get("id") or evento.get("agent_id"),
+            "agent_name": agent.get("name") or evento.get("agent_name"),
             "component": evento.get("component"),
             "operation": evento.get("operation"),
             "status": evento.get("status"),
             "duration_ms": evento.get("duration_ms"),
-            "metadata": self._serializar(
-                evento.get("metadata") or {}
-            ),
-            "error": (
-                self._serializar(evento["error"])
-                if evento.get("error") is not None
-                else None
-            ),
+            "metadata": self._serializar(evento.get("metadata") or {}),
+            "error": self._serializar(error) if error else None,
             "payload": self._serializar(evento),
         }
 
         try:
             with self._lock, self.engine.begin() as connection:
                 connection.execute(sql, parametros)
-
         except Exception:
             if not self.fail_silently:
                 raise
 
     def close(self) -> None:
-        """Encerra o pool de conexões."""
-
         self.engine.dispose()
