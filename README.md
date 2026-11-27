@@ -60,22 +60,22 @@ A biblioteca utiliza uma arquitetura modular, permitindo que os recursos sejam u
 
 ## Principais recursos
 
-| Recurso | Descrição |
-|---|---|
-| Agent Manager | Registro, consulta, execução e remoção de agentes |
-| Agent Runtime | Ambiente controlado de execução |
-| Agent Protocol | Contrato estrutural para agentes |
-| Orchestration | Coordenação de múltiplos agentes |
-| Sequential Execution | Execução sequencial |
-| Parallel Execution | Execução paralela |
-| Memory | Persistência de memória em PostgreSQL |
-| Knowledge | Gerenciamento de conhecimento e RAG |
-| Embeddings | Integração com modelos de embeddings |
-| Vector Store | Armazenamento vetorial com pgvector |
-| Tool Registry | Registro e execução de ferramentas |
-| MCP | Integração com servidores MCP |
-| Observability | Eventos, logs e rastreamento |
-| Context Isolation | Isolamento de contexto por execução |
+| Recurso              | Descrição                                         |
+| -------------------- | ------------------------------------------------- |
+| Agent Manager        | Registro, consulta, execução e remoção de agentes |
+| Agent Runtime        | Ambiente controlado de execução                   |
+| Agent Protocol       | Contrato estrutural para agentes                  |
+| Orchestration        | Coordenação de múltiplos agentes                  |
+| Sequential Execution | Execução sequencial                               |
+| Parallel Execution   | Execução paralela                                 |
+| Memory               | Persistência de memória em PostgreSQL             |
+| Knowledge            | Gerenciamento de conhecimento e RAG               |
+| Embeddings           | Integração com modelos de embeddings              |
+| Vector Store         | Armazenamento vetorial com pgvector               |
+| Tool Registry        | Registro e execução de ferramentas                |
+| MCP                  | Integração com servidores MCP                     |
+| Observability        | Eventos, logs e rastreamento                      |
+| Context Isolation    | Isolamento de contexto por execução               |
 
 ---
 
@@ -159,18 +159,18 @@ Os contextos de execução permitem separar informações de diferentes agentes,
 
 ## Tecnologias
 
-| Tecnologia | Finalidade |
-|---|---|
-| Python 3.12+ | Linguagem principal |
-| Agno 3.2.x | Engine interna de agentes |
-| PostgreSQL | Persistência |
-| pgvector | Armazenamento vetorial |
-| SQLAlchemy | Acesso e gerenciamento de banco |
-| DeepSeek | Provedor de modelos de linguagem |
-| Jina | Embeddings |
-| MCP | Integração com ferramentas externas |
-| Ruff | Qualidade e padronização do código |
-| Pytest | Testes automatizados |
+| Tecnologia   | Finalidade                          |
+| ------------ | ----------------------------------- |
+| Python 3.12+ | Linguagem principal                 |
+| Agno 3.2.x   | Engine interna de agentes           |
+| PostgreSQL   | Persistência                        |
+| pgvector     | Armazenamento vetorial              |
+| SQLAlchemy   | Acesso e gerenciamento de banco     |
+| DeepSeek     | Provedor de modelos de linguagem    |
+| Jina         | Embeddings                          |
+| MCP          | Integração com ferramentas externas |
+| Ruff         | Qualidade e padronização do código  |
+| Pytest       | Testes automatizados                |
 
 ---
 
@@ -654,11 +654,11 @@ Exemplo:
 0.1.0
 ```
 
-| Tipo | Quando utilizar | Exemplo |
-|---|---|---|
-| PATCH | Correções compatíveis | 0.1.0 → 0.1.1 |
+| Tipo  | Quando utilizar                   | Exemplo       |
+| ----- | --------------------------------- | ------------- |
+| PATCH | Correções compatíveis             | 0.1.0 → 0.1.1 |
 | MINOR | Novas funcionalidades compatíveis | 0.1.0 → 0.2.0 |
-| MAJOR | Mudanças incompatíveis | 0.1.0 → 1.0.0 |
+| MAJOR | Mudanças incompatíveis            | 0.1.0 → 1.0.0 |
 
 ### Como atualizar a biblioteca
 
@@ -794,3 +794,16 @@ Este projeto utiliza a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para 
 **LKThink Agent — Modular Agent Engineering.**
 
 Uma base extensível para construir, executar e orquestrar sistemas inteligentes.
+
+## Exemplos de uso
+
+Consulte o [README_EXAMPLES.md](README_EXAMPLES.md)
+para exemplos práticos de:
+
+- Criação e execução de agentes.
+- DeepSeek.
+- Memória persistente.
+- Knowledge Base com pgvector.
+- Integração MCP.
+- Orquestração sequencial e paralela.
+- Observabilidade.
