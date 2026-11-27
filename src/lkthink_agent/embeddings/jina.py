@@ -1,3 +1,4 @@
+
 from agno.knowledge.embedder.jina import JinaEmbedder
 
 from lkthink_agent.embeddings.base import BaseEmbedder
@@ -11,13 +12,12 @@ class JinaEmbeddingProvider(BaseEmbedder):
             id=config.embedding_model,
             dimensions=config.embedding_dimensions,
             api_key=config.jina_api_key,
-            distance=config.distance,
         )
-    
+
     @property
     def dimensions(self) -> int:
         return self.config.embedding_dimensions
-    
+
     def embed(self, text: str) -> list[float]:
         if not text or not text.strip():
             raise ValueError("O texto para embedding não pode ser vazio.")

@@ -2,6 +2,41 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Mapping
+
+
+def _cores_agentes() -> Mapping[str, str]:
+    return MappingProxyType({
+        "AGENT-01": "blue",
+        "AGENT-02": "green",
+        "AGENT-03": "yellow",
+    })
+
+
+def _cores_componentes() -> Mapping[str, str]:
+    return MappingProxyType({
+        "orchestrator": "magenta",
+        "runtime": "cyan",
+        "knowledge": "purple",
+        "rag": "purple",
+        "memory": "bright_blue",
+        "tools": "orange",
+        "mcp": "white",
+        "llm": "bright_cyan",
+        "embedding": "bright_magenta",
+        "error": "red",
+    })
+
+
+def _cores_niveis() -> Mapping[str, str]:
+    return MappingProxyType({
+        "DEBUG": "gray",
+        "INFO": "green",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "bright_red",
+    })
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +56,7 @@ class ObservabilityConfig:
     # Formato e apresentação
     console_colors: bool = True
     console_human_messages: bool = True
+    console_force_colors: bool = True
     json_pretty: bool = False
 
     # Controle de volume
@@ -29,39 +65,18 @@ class ObservabilityConfig:
     max_metadata_length: int = 12_000
 
     # Identidade visual dos agentes
-    agent_colors: dict[str, str] = field(
-        default_factory=lambda: {
-            "AGENT-01": "blue",
-            "AGENT-02": "green",
-            "AGENT-03": "yellow",
-        }
+    agent_colors: Mapping[str, str] = field(
+        default_factory=_cores_agentes
     )
 
     # Identidade visual dos componentes
-    component_colors: dict[str, str] = field(
-        default_factory=lambda: {
-            "orchestrator": "magenta",
-            "runtime": "cyan",
-            "knowledge": "purple",
-            "rag": "purple",
-            "memory": "bright_blue",
-            "tools": "orange",
-            "mcp": "white",
-            "llm": "bright_cyan",
-            "embedding": "bright_magenta",
-            "error": "red",
-        }
+    component_colors: Mapping[str, str] = field(
+        default_factory=_cores_componentes
     )
 
     # Identidade visual por nível
-    level_colors: dict[str, str] = field(
-        default_factory=lambda: {
-            "DEBUG": "gray",
-            "INFO": "green",
-            "WARNING": "yellow",
-            "ERROR": "red",
-            "CRITICAL": "bright_red",
-        }
+    level_colors: Mapping[str, str] = field(
+        default_factory=_cores_niveis
     )
 
     def __post_init__(self) -> None:
@@ -73,10 +88,14 @@ class ObservabilityConfig:
             "CRITICAL",
         }
 
-        if self.log_level.upper() not in niveis_validos:
+        nivel = self.log_level.upper()
+
+        if nivel not in niveis_validos:
             raise ValueError(
                 f"Nível de log inválido: {self.log_level}"
             )
+
+        object.__setattr__(self, "log_level", nivel)
 
         if self.max_message_length <= 0:
             raise ValueError(
@@ -93,6 +112,23 @@ class ObservabilityConfig:
                 "postgres_url é obrigatória quando "
                 "postgres_enabled=True."
             )
+
+        # Protege também configurações fornecidas externamente.
+        object.__setattr__(
+            self,
+            "agent_colors",
+            MappingProxyType(dict(self.agent_colors)),
+        )
+        object.__setattr__(
+            self,
+            "component_colors",
+            MappingProxyType(dict(self.component_colors)),
+        )
+        object.__setattr__(
+            self,
+            "level_colors",
+            MappingProxyType(dict(self.level_colors)),
+        )
 
     def obter_cor_agente(self, label: str) -> str:
         return self.agent_colors.get(label, "white")

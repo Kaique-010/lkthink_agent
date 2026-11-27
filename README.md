@@ -157,6 +157,12 @@ O Runtime centraliza a execução dos agentes e propaga o contexto operacional.
 
 Os contextos de execução permitem separar informações de diferentes agentes, usuários e organizações.
 
+## Documentação detalhada
+
+A documentação completa da API e dos módulos está em [`docs/`](docs/index.md). Consulte o [guia de instalação](docs/installation.md), [agentes e Runtime](docs/agents-runtime.md), [orquestração](docs/orchestration.md), [memória](docs/memory.md), [Knowledge/RAG](docs/knowledge.md), [ferramentas e MCP](docs/tools-mcp.md), [observabilidade](docs/observability.md) e a [referência completa da API](docs/api-reference.md).
+
+---
+
 ## Tecnologias
 
 | Tecnologia   | Finalidade                          |
@@ -392,7 +398,7 @@ Múltiplos agentes são executados simultaneamente.
 - Contexto compartilhado da execução.
 - Eventos e rastreamento operacional.
 
-A execução híbrida, combinando etapas sequenciais e paralelas, não faz parte da versão 0.1.0.
+Uma equipe pode combinar etapas sequenciais e paralelas em etapas ordenadas, conforme a configuração `TeamConfig` da versão atual.
 
 ---
 

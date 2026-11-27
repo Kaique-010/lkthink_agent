@@ -1,7 +1,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING
 
 from lkthink_agent.agents.abstractions import AgentProtocol
@@ -117,7 +116,7 @@ class AgentManager:
 
     async def close_all(self) -> None:
         """
-        Fecha todos os agentes registrados.
+        Fecha todos os agentes registrados sequencialmente.
 
         Todos os encerramentos são tentados, mesmo quando algum falha.
         O registro é esvaziado antes do encerramento.
@@ -130,16 +129,14 @@ class AgentManager:
         if not agents:
             return
 
-        results = await asyncio.gather(
-            *(agent.close() for agent in agents),
-            return_exceptions=True,
-        )
+        errors: list[BaseException] = []
 
-        errors = [
-            result
-            for result in results
-            if isinstance(result, BaseException)
-        ]
+        for agent in agents:
+            try:
+                await agent.close()
+
+            except BaseException as exc:
+                errors.append(exc)
 
         if errors:
             raise BaseExceptionGroup(

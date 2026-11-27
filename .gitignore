@@ -108,3 +108,5 @@ docs/_build/
 site/
 .pytest_cache/
 
+/demo-docker/
+_ruff_cache/

@@ -1,6 +1,8 @@
+
 from __future__ import annotations
 
 import sys
+from datetime import datetime
 from typing import Any, ClassVar, TextIO
 
 from lkthink_agent.observability.config import ObservabilityConfig
@@ -15,54 +17,73 @@ class ConsoleExporter:
     """
 
     CORES_ANSI: ClassVar[dict[str, str]] = {
-    "black": "\033[30m",
-    "red": "\033[31m",
-    "green": "\033[32m",
-    "yellow": "\033[33m",
-    "blue": "\033[34m",
-    "magenta": "\033[35m",
-    "purple": "\033[35m",
-    "cyan": "\033[36m",
-    "white": "\033[37m",
-    "gray": "\033[90m",
-    "bright_red": "\033[91m",
-    "bright_green": "\033[92m",
-    "bright_yellow": "\033[93m",
-    "bright_blue": "\033[94m",
-    "bright_magenta": "\033[95m",
-    "bright_cyan": "\033[96m",
-    "orange": "\033[38;5;208m",
+        "black": "\033[30m",
+        "red": "\033[31m",
+        "green": "\033[32m",
+        "yellow": "\033[33m",
+        "blue": "\033[34m",
+        "magenta": "\033[35m",
+        "purple": "\033[35m",
+        "cyan": "\033[36m",
+        "white": "\033[37m",
+        "gray": "\033[90m",
+        "bright_red": "\033[91m",
+        "bright_green": "\033[92m",
+        "bright_yellow": "\033[93m",
+        "bright_blue": "\033[94m",
+        "bright_magenta": "\033[95m",
+        "bright_cyan": "\033[96m",
+        "orange": "\033[38;5;208m",
     }
 
     RESET: ClassVar[str] = "\033[0m"
     BOLD: ClassVar[str] = "\033[1m"
     DIM: ClassVar[str] = "\033[2m"
 
+    COMPONENT_LABELS: ClassVar[dict[str, str]] = {
+        "orchestrator": "ORCHESTRATOR",
+        "runtime": "RUNTIME",
+        "knowledge": "KNOWLEDGE",
+        "rag": "RAG",
+        "memory": "MEMORY",
+        "tools": "TOOLS",
+        "mcp": "MCP",
+        "llm": "LLM",
+        "embedding": "EMBEDDING",
+        "error": "ERROR",
+    }
+
     def __init__(
         self,
-        config: ObservabilityConfig | None = None,
-        stream: TextIO | None = None,
+        config: ObservabilityConfig,
+        stream=None,
         force_color: bool | None = None,
     ):
-        self.config = config or ObservabilityConfig()
+        self.config = config
         self.stream = stream or sys.stdout
 
         if force_color is None:
-            is_terminal = getattr(self.stream, "isatty", lambda: False)()
             self.use_colors = (
-                self.config.console_colors and is_terminal
+                config.console_colors
+                and hasattr(self.stream, "isatty")
+                and self.stream.isatty()
             )
         else:
             self.use_colors = (
-                self.config.console_colors and force_color
+                config.console_colors and force_color
             )
-
     def export(self, evento: dict[str, Any]) -> None:
         """Exibe um evento no terminal."""
 
-        horario = self._formatar_horario(evento.get("timestamp"))
+        horario = self._formatar_horario(
+            evento.get("timestamp")
+        )
+
+        agente = evento.get("agent")
+        component = evento.get("component")
+
         identidade = self._obter_identidade(evento)
-        nivel = evento.get("level", "INFO")
+        nivel = str(evento.get("level", "INFO")).upper()
 
         mensagem = (
             evento.get("message", "")
@@ -77,13 +98,31 @@ class ConsoleExporter:
                 identidade["color"],
                 bold=True,
             ),
+        ]
+
+        # Com agente presente, o componente ganha identificação própria.
+        if isinstance(agente, dict) and component:
+            label_componente = self._obter_label_componente(
+                component
+            )
+
+            partes.append(
+                self._colorir(
+                    f"[{label_componente}]",
+                    self.config.obter_cor_componente(component),
+                    bold=True,
+                )
+            )
+
+        partes.append(
             self._colorir(
                 f"[{nivel}]",
                 self.config.obter_cor_nivel(nivel),
                 bold=True,
-            ),
-            mensagem,
-        ]
+            )
+        )
+
+        partes.append(str(mensagem))
 
         detalhes = self._obter_detalhes(evento)
 
@@ -95,51 +134,39 @@ class ConsoleExporter:
                 )
             )
 
-        linha = " ".join(partes)
-
-        self.stream.write(linha + "\n")
+        self.stream.write(" ".join(partes) + "\n")
         self.stream.flush()
 
     def _obter_identidade(
         self,
         evento: dict[str, Any],
     ) -> dict[str, str]:
-        """Identifica quem está emitindo o evento."""
+        """Identifica o agente ou componente responsável."""
 
         agente = evento.get("agent")
 
-        if agente:
-            label = agente.get("label", "AGENT")
-            cor = self.config.agent_colors.get(
-                label,
-                agente.get("color", "white"),
-            )
+        if isinstance(agente, dict):
+            label = str(agente.get("label") or "AGENT")
 
             return {
                 "label": label,
-                "color": cor,
+                "color": self.config.obter_cor_agente(label),
             }
 
-        component = evento.get("component") or "system"
-
-        label = {
-            "orchestrator": "ORCHESTRATOR",
-            "runtime": "RUNTIME",
-            "knowledge": "KNOWLEDGE",
-            "rag": "KNOWLEDGE",
-            "memory": "MEMORY",
-            "tools": "TOOLS",
-            "mcp": "MCP",
-            "llm": "LLM",
-            "embedding": "EMBEDDING",
-        }.get(component, component.upper())
-
-        cor = self.config.obter_cor_componente(component)
+        component = str(
+            evento.get("component") or "system"
+        )
 
         return {
-            "label": label,
-            "color": cor,
+            "label": self._obter_label_componente(component),
+            "color": self.config.obter_cor_componente(component),
         }
+
+    def _obter_label_componente(self, component: str) -> str:
+        return self.COMPONENT_LABELS.get(
+            component,
+            component.upper(),
+        )
 
     def _obter_detalhes(
         self,
@@ -147,7 +174,7 @@ class ConsoleExporter:
     ) -> list[str]:
         """Monta informações técnicas complementares."""
 
-        detalhes = []
+        detalhes: list[str] = []
 
         component = evento.get("component")
         operation = evento.get("operation")
@@ -155,7 +182,12 @@ class ConsoleExporter:
         duration = evento.get("duration_ms")
 
         if component:
-            detalhes.append(f"componente={component}")
+            detalhes.append(
+                self._colorir(
+                    f"componente={component}",
+                    self.config.obter_cor_componente(component),
+                )
+            )
 
         if operation:
             detalhes.append(f"operação={operation}")
@@ -164,36 +196,60 @@ class ConsoleExporter:
             detalhes.append(f"status={status}")
 
         if duration is not None:
-            detalhes.append(f"duração={duration:.2f}ms")
+            try:
+                detalhes.append(f"duração={float(duration):.2f}ms")
+            except (TypeError, ValueError):
+                detalhes.append(f"duração={duration}")
 
-        run_id = evento.get("run_id")
+        for campo, nome in (
+            ("run_id", "run"),
+            ("trace_id", "trace"),
+            ("span_id", "span"),
+            ("parent_span_id", "parent_span"),
+        ):
+            identificador = evento.get(campo)
 
-        if run_id:
-            detalhes.append(f"run={run_id[:8]}")
-
-        trace_id = evento.get("trace_id")
-
-        if trace_id:
-            detalhes.append(f"trace={trace_id[:8]}")
+            if identificador:
+                detalhes.append(
+                    f"{nome}={str(identificador)[:8]}"
+                )
 
         erro = evento.get("error")
 
-        if erro:
+        if isinstance(erro, dict):
             tipo = erro.get("type", "Error")
-            detalhes.append(f"erro={tipo}")
+
+            detalhes.append(
+                self._colorir(
+                    f"erro={tipo}",
+                    self.config.obter_cor_nivel("ERROR"),
+                    bold=True,
+                )
+            )
 
         return detalhes
 
-    def _formatar_horario(self, timestamp: str | None) -> str:
+    def _formatar_horario(
+        self,
+        timestamp: str | None,
+    ) -> str:
         """Extrai o horário de um timestamp ISO."""
 
         if not timestamp:
             return "--:--:--"
 
-        if "T" in timestamp:
-            return timestamp.split("T")[-1][:8]
+        try:
+            valor = str(timestamp)
 
-        return timestamp[:8]
+            if valor.endswith("Z"):
+                valor = valor[:-1] + "+00:00"
+
+            return datetime.fromisoformat(valor).strftime(
+                "%H:%M:%S"
+            )
+
+        except (ValueError, TypeError):
+            return str(timestamp)[:8]
 
     def _colorir(
         self,
