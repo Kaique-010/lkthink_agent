@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 postgres = [
     "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
     "psycopg[binary]",
     "pgvector",
 ]

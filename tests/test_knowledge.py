@@ -286,15 +286,19 @@ def test_rejeita_usuario_diferente_do_runtime(knowledge_service):
 
 
 def test_rejeita_texto_vazio(knowledge_service):
-    with contexto_runtime():
-        with pytest.raises(ValueError, match="conteúdo não pode ser vazio"):
-            knowledge_service.add_text("   ")
+    with contexto_runtime(), pytest.raises(
+        ValueError,
+        match="conteúdo não pode ser vazio",
+    ):
+        knowledge_service.add_text("   ")
 
 
 def test_rejeita_consulta_vazia(knowledge_service):
-    with contexto_runtime():
-        with pytest.raises(ValueError, match="consulta não pode ser vazia"):
-            knowledge_service.search("   ")
+    with contexto_runtime(), pytest.raises(
+        ValueError,
+        match="consulta não pode ser vazia",
+    ):
+        knowledge_service.search("   ")
 
 
 def test_rejeita_limite_invalido(knowledge_service):

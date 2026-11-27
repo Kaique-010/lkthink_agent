@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
-from lkthink_agent.agents.agent import LKThinkAgent
 from lkthink_agent.observability.context import (
     criar_contexto_execucao,
     definir_contexto,
@@ -25,6 +24,7 @@ from lkthink_agent.observability.tool_execution import (
 from lkthink_agent.observability.tracing import Tracer
 
 if TYPE_CHECKING:
+    from lkthink_agent.agents.abstractions import AgentProtocol
     from lkthink_agent.knowledge.service import KnowledgeService
     from lkthink_agent.memory.service import MemoryService
 
@@ -257,7 +257,7 @@ class AgentRuntime:
     async def _recuperar_memorias(
         self,
         *,
-        agent: LKThinkAgent,
+        agent: AgentProtocol,
         user_id: str | None,
         session_id: str | None,
     ) -> list[Any]:
@@ -351,7 +351,7 @@ class AgentRuntime:
         self,
         *,
         prompt: str,
-        agent: LKThinkAgent,
+        agent: AgentProtocol,
     ) -> list[dict[str, Any]]:
         """Recupera conhecimento respeitando o contexto de segurança."""
 
@@ -541,7 +541,7 @@ class AgentRuntime:
 
     async def executar(
         self,
-        agent: LKThinkAgent,
+        agent: AgentProtocol,
         prompt: str,
         *,
         user_id: str | None = None,
@@ -811,7 +811,7 @@ class AgentRuntime:
     
     async def remember(
         self,
-        agent: LKThinkAgent,
+        agent: AgentProtocol,
         *,
         user_id: str,
         content: str,

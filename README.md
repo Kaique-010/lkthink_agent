@@ -1,508 +1,796 @@
 # LKThink Agent
-## Software Design Document — SDD
 
-**Versão:** 0.3.0  
-**Data:** 26/11/2026  
-**Status:** Em desenvolvimento  
-**Progresso estimado:** 72% concluído  
-**Trabalho restante:** 28%
+**Modular Agent Engineering — Framework Python para construção, execução e orquestração de agentes de Inteligência Artificial.**
+
+[![PyPI version](https://img.shields.io/pypi/v/lkthink-agent)](https://pypi.org/project/lkthink-agent/)
+[![Python](https://img.shields.io/pypi/pyversions/lkthink-agent)](https://pypi.org/project/lkthink-agent/)
+[![License](https://img.shields.io/pypi/l/lkthink-agent)](LICENSE)
+
+O **LKThink Agent** é um framework modular desenvolvido em Python para facilitar a construção de aplicações baseadas em agentes de Inteligência Artificial.
+
+Construído sobre Python e Agno, oferece uma arquitetura própria para gerenciamento de agentes, execução controlada, orquestração de equipes, memória persistente, recuperação contextual de conhecimento (RAG), integração com ferramentas externas e observabilidade.
+
+O objetivo é fornecer uma base de engenharia extensível e independente do provedor de modelos de linguagem, permitindo que diferentes componentes sejam utilizados individualmente ou combinados em arquiteturas multiagentes.
+
+O Agno funciona como mecanismo interno de execução. O LKThink Agent disponibiliza sua própria camada de gerenciamento, contexto, orquestração e integração.
 
 ---
 
-# 1. Visão geral
+## Índice
 
-O LKThink Agent é uma biblioteca Python para construção, configuração, execução e gerenciamento de agentes inteligentes especializados.
+- [Visão geral](#visão-geral)
+- [Principais recursos](#principais-recursos)
+- [Arquitetura](#arquitetura)
+- [Tecnologias](#tecnologias)
+- [Instalação](#instalação)
+- [Extras opcionais](#extras-opcionais)
+- [Configuração](#configuração)
+- [Componentes](#componentes)
+- [Gerenciamento de agentes](#gerenciamento-de-agentes)
+- [Orquestração](#orquestração)
+- [Memória persistente](#memória-persistente)
+- [Knowledge e RAG](#knowledge-e-rag)
+- [Ferramentas e MCP](#ferramentas-e-mcp)
+- [Observabilidade](#observabilidade)
+- [Isolamento de contexto](#isolamento-de-contexto)
+- [Testes](#testes)
+- [Build e distribuição](#build-e-distribuição)
+- [Atualizações e versionamento](#atualizações-e-versionamento)
+- [Roadmap](#roadmap)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
 
-O projeto tem como objetivo oferecer uma infraestrutura reutilizável para aplicações que precisam trabalhar com múltiplos agentes, ferramentas, memória, conhecimento contextual, observabilidade e integração com modelos de linguagem.
+---
 
-A biblioteca deve funcionar de maneira independente, podendo ser instalada por meio de:
+## Visão geral
+
+O LKThink Agent foi projetado para resolver desafios comuns no desenvolvimento de aplicações baseadas em agentes de IA:
+
+- Gerenciamento centralizado de agentes.
+- Execução isolada e controlada.
+- Orquestração de múltiplos agentes.
+- Compartilhamento controlado de ferramentas.
+- Memória persistente por escopo.
+- Recuperação contextual de conhecimento.
+- Integração com servidores MCP.
+- Rastreamento de execuções e eventos.
+- Isolamento de contexto entre usuários, agentes e organizações.
+
+A biblioteca utiliza uma arquitetura modular, permitindo que os recursos sejam utilizados separadamente, sem obrigar a aplicação a adotar uma estrutura monolítica.
+
+## Principais recursos
+
+| Recurso | Descrição |
+|---|---|
+| Agent Manager | Registro, consulta, execução e remoção de agentes |
+| Agent Runtime | Ambiente controlado de execução |
+| Agent Protocol | Contrato estrutural para agentes |
+| Orchestration | Coordenação de múltiplos agentes |
+| Sequential Execution | Execução sequencial |
+| Parallel Execution | Execução paralela |
+| Memory | Persistência de memória em PostgreSQL |
+| Knowledge | Gerenciamento de conhecimento e RAG |
+| Embeddings | Integração com modelos de embeddings |
+| Vector Store | Armazenamento vetorial com pgvector |
+| Tool Registry | Registro e execução de ferramentas |
+| MCP | Integração com servidores MCP |
+| Observability | Eventos, logs e rastreamento |
+| Context Isolation | Isolamento de contexto por execução |
+
+---
+
+## Arquitetura
+
+O LKThink Agent utiliza uma arquitetura modular organizada por responsabilidades.
+
+```text
+LKThink Agent
+│
+├── agents/
+│   ├── protocols
+│   ├── config
+│   ├── manager
+│   └── runtime
+│
+├── orchestration/
+│   ├── config
+│   ├── context
+│   ├── orchestrator
+│   ├── aggregator
+│   └── executors/
+│       ├── base
+│       ├── sequential
+│       └── parallel
+│
+├── memory/
+│   ├── config
+│   └── service
+│
+├── knowledge/
+│   ├── config
+│   ├── reader
+│   ├── chunking
+│   └── service
+│
+├── embeddings/
+│   ├── base
+│   └── jina
+│
+├── vectorstores/
+│   └── pgvector
+│
+├── tools/
+│   ├── registry
+│   └── adapters
+│
+├── mcp/
+│   ├── clients
+│   ├── discovery
+│   └── permissions
+│
+└── observability/
+    ├── context
+    ├── events
+    └── exporters/
+        └── postgres
+```
+
+### Princípios arquiteturais
+
+**Modularidade**
+
+Cada domínio possui responsabilidades próprias e pode evoluir independentemente.
+
+**Baixo acoplamento**
+
+A aplicação não precisa depender diretamente do Agno para acessar os recursos de gerenciamento e orquestração do LKThink Agent.
+
+**Extensibilidade**
+
+Novos provedores, agentes, ferramentas, executores e mecanismos de armazenamento podem ser incorporados à arquitetura.
+
+**Execução controlada**
+
+O Runtime centraliza a execução dos agentes e propaga o contexto operacional.
+
+**Isolamento**
+
+Os contextos de execução permitem separar informações de diferentes agentes, usuários e organizações.
+
+## Tecnologias
+
+| Tecnologia | Finalidade |
+|---|---|
+| Python 3.12+ | Linguagem principal |
+| Agno 3.2.x | Engine interna de agentes |
+| PostgreSQL | Persistência |
+| pgvector | Armazenamento vetorial |
+| SQLAlchemy | Acesso e gerenciamento de banco |
+| DeepSeek | Provedor de modelos de linguagem |
+| Jina | Embeddings |
+| MCP | Integração com ferramentas externas |
+| Ruff | Qualidade e padronização do código |
+| Pytest | Testes automatizados |
+
+---
+
+## Instalação
+
+### Requisitos
+
+- Python 3.12 ou superior.
+- PostgreSQL para recursos de persistência.
+- Extensão pgvector para funcionalidades vetoriais.
+- Docker opcional, recomendado para infraestrutura local.
+
+### Instalação básica pelo PyPI
 
 ```bash
 pip install lkthink-agent
 ```
 
-A aplicação consumidora deve conseguir criar agentes especializados, compartilhar um runtime, configurar provedores, conectar ferramentas e executar tarefas sem precisar conhecer os detalhes internos do motor de agentes.
+### Instalação com todas as integrações
 
-O Agno será utilizado como motor interno de execução, sem expor seus objetos como parte da API pública principal.
-
-# 2. Objetivos do projeto
-
-- Construir uma biblioteca Python modular e extensível.
-- Permitir múltiplos agentes especializados em uma mesma aplicação.
-- Isolar configurações, ferramentas, memória e conhecimento por agente.
-- Permitir compartilhamento controlado de infraestrutura.
-- Suportar provedores diferentes de LLM e embeddings.
-- Integrar ferramentas externas por MCP.
-- Implementar memória operacional e recuperação contextual.
-- Implementar RAG com PostgreSQL e pgvector.
-- Disponibilizar observabilidade de execução.
-- Permitir execução independente da biblioteca e futura integração HTTP.
-- Preparar o pacote para distribuição pública.
-
-## Fora do escopo inicial
-
-- LangGraph como orquestrador principal.
-- Treinamento ou fine-tuning automático de modelos.
-- Persistência automática de todas as conversas como memória.
-- Dependência obrigatória de uma API HTTP para utilizar a biblioteca.
-
-# 3. Decisões arquiteturais
-
-| Componente | Decisão |
-|---|---|
-| Linguagem | Python |
-| Motor interno | Agno 3.2.1 |
-| Banco principal | PostgreSQL |
-| Banco vetorial | PostgreSQL + pgvector |
-| LLM inicial | DeepSeek |
-| Embeddings inicial | Jina |
-| Comunicação com ferramentas | MCP |
-| API futura | FastAPI |
-| Containerização | Docker |
-| Runtime | Compartilhado |
-| MCP | Compartilhado sob demanda |
-| Times de agentes | Híbridos |
-| Frontend futuro | React |
-
-A arquitetura deve priorizar baixo acoplamento, interfaces bem definidas e componentes plug-and-play.
-
-O Core não deve carregar automaticamente arquivos `.env`. A aplicação consumidora será responsável pela configuração do ambiente.
-
-# 4. Arquitetura modular
-
-Estrutura lógica prevista:
-
-```text
-lkthink_agent/
-├── agents/
-├── execution/
-├── providers/
-├── knowledge/
-├── memory/
-├── tools/
-├── mcp/
-├── observability/
-├── vectorstore/
-├── api/
-└── core/
+```bash
+pip install "lkthink-agent[postgres,knowledge,mcp,api]"
 ```
 
-## 4.1 Agents
+### Instalação por funcionalidades
 
-Responsável pela criação, identidade, configuração e ciclo de vida dos agentes.
+PostgreSQL e memória:
 
-## 4.2 Execution
+```bash
+pip install "lkthink-agent[postgres]"
+```
 
-Responsável pelo runtime compartilhado, execução, normalização dos resultados e gerenciamento de contexto.
+Knowledge e RAG:
 
-## 4.3 Providers
+```bash
+pip install "lkthink-agent[knowledge]"
+```
 
-Responsável pela abstração dos provedores de LLM e embeddings.
+Integração MCP:
 
-## 4.4 Knowledge
+```bash
+pip install "lkthink-agent[mcp]"
+```
 
-Responsável pela ingestão, processamento, indexação e recuperação de conhecimento.
+API com FastAPI:
 
-## 4.5 Memory
+```bash
+pip install "lkthink-agent[api]"
+```
 
-Responsável pela memória operacional e persistência explícita de informações.
+### Instalação para desenvolvimento
 
-## 4.6 Tools e MCP
+Clone o repositório:
 
-Responsáveis pelo registro, isolamento e execução de ferramentas internas e externas.
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd lkthink-agent
+```
 
-## 4.7 Observability
+Crie um ambiente virtual:
 
-Responsável por eventos, logs, métricas e rastreamento.
+```bash
+python -m venv .venv
+```
 
-## 4.8 VectorStore
+Windows:
 
-Responsável pela integração com armazenamento vetorial PostgreSQL/pgvector.
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
-## 4.9 API
+Linux:
 
-Camada futura de exposição HTTP, sem duplicar as regras do Core.
+```bash
+source .venv/bin/activate
+```
 
-# 5. Gerenciamento de agentes
+Instale o pacote em modo editável com as dependências de desenvolvimento:
 
-Cada agente deverá possuir:
+```bash
+pip install -e ".[postgres,knowledge,mcp,api,dev]"
+```
 
-- ID único.
-- Slug único.
-- Nome e identificação visual.
-- Instruções próprias.
-- Configuração individual.
-- Provedor configurável.
-- Ferramentas próprias ou explicitamente compartilhadas.
-- Memória contextual.
-- Conhecimento especializado.
-- Ciclo de vida independente.
+---
 
-O `AgentManager` será responsável por:
+## Configuração
 
-- Registrar agentes.
-- Buscar por ID ou slug.
-- Impedir identificadores duplicados.
-- Remover agentes.
-- Encerrar recursos.
-- Executar agentes pelo runtime compartilhado.
+As credenciais devem ser fornecidas por variáveis de ambiente ou mecanismos seguros de configuração da aplicação.
 
-**Status:** Concluído na camada unitária.
+Exemplo conceitual:
 
-Critérios validados:
-- Normalização de ID e slug no AgentConfig.
-- Rejeição de valores inválidos.
-- Imutabilidade da configuração.
-- Prevenção de IDs e slugs duplicados.
-- Busca por ID e slug.
-- Remoção e encerramento.
-- Tratamento de falhas no fechamento.
+```env
+# Model Provider
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_BASE_URL=
 
-Última validação: 31 testes aprovados e Ruff sem erros.
+# PostgreSQL
+DATABASE_URL=
 
-Pendente: integração completa com agentes reais, provedores e execução concorrente.
+# Vector Database
+VECTOR_DATABASE_URL=
 
-# 6. Runtime e execução
+# Embeddings
+JINA_API_KEY=
+```
 
-O `AgentRuntime` será compartilhado entre os agentes.
+Não armazene credenciais diretamente no código-fonte ou no controle de versão.
+
+**Observação:** as URLs de conexão devem respeitar o driver esperado por cada componente. A memória assíncrona utiliza SQLAlchemy com asyncpg; o armazenamento de conhecimento utiliza o driver PostgreSQL compatível com sua implementação.
+
+---
+
+## Componentes
+
+### Agent Protocol
+
+Define o contrato estrutural esperado para os agentes gerenciados pela biblioteca.
+
+O protocolo permite trabalhar com diferentes implementações, desde que respeitem as operações necessárias para identificação, execução e encerramento.
+
+### AgentConfig
+
+Responsável por representar a configuração de um agente.
+
+Utiliza uma estrutura imutável (`frozen slots dataclass`) e valida os identificadores e dados de configuração.
+
+### AgentManager
+
+Responsável pelo ciclo de vida dos agentes:
+
+- Registro.
+- Consulta.
+- Listagem.
+- Verificação de existência.
+- Execução.
+- Remoção.
+- Encerramento individual.
+- Encerramento de todos os agentes.
+
+### AgentRuntime
+
+Centraliza a execução controlada dos agentes.
 
 Responsabilidades:
 
-- Executar agentes.
-- Recuperar memórias antes da execução.
-- Persistir memórias somente mediante solicitação explícita.
-- Criar contexto de execução.
-- Registrar logs.
-- Registrar métricas.
-- Criar spans de rastreamento.
-- Normalizar resultados.
-- Propagar erros de execução.
+- Preparar o contexto de execução.
+- Propagar identificadores operacionais.
+- Integrar observabilidade.
+- Executar o agente.
+- Restaurar o contexto anterior após a execução, inclusive em caso de erro.
 
-Cada execução deverá possuir contexto próprio, contendo:
+---
+
+## Gerenciamento de agentes
+
+O gerenciamento de agentes é independente da estratégia de orquestração.
+
+O `AgentManager` mantém o registro dos agentes disponíveis e permite que o Runtime seja utilizado para executar suas operações.
+
+Cada agente possui identidade própria, permitindo que a aplicação trabalhe com diferentes especialistas.
+
+## Orquestração
+
+O módulo `orchestration` permite coordenar múltiplos agentes em uma mesma operação.
+
+Uma equipe pode conter diferentes etapas, cada uma com sua própria estratégia de execução.
+
+### Execução sequencial
+
+Os agentes são executados em sequência. O resultado de uma etapa pode ser utilizado como entrada da próxima.
+
+```text
+Solicitação
+    |
+    v
+Agente 1
+    |
+    v
+Agente 2
+    |
+    v
+Agente 3
+    |
+    v
+Resultado final
+```
+
+### Execução paralela
+
+Múltiplos agentes são executados simultaneamente.
+
+```text
+             Solicitação
+                  |
+          +-------+-------+
+          |       |       |
+          v       v       v
+       Agente 1 Agente 2 Agente 3
+          |       |       |
+          +-------+-------+
+                  |
+                  v
+              Agregação
+                  |
+                  v
+               Resultado
+```
+
+### Recursos de orquestração
+
+- Configuração de equipes.
+- Configuração de etapas.
+- Execução sequencial.
+- Execução paralela.
+- Agregação de resultados.
+- Identificação de falhas por agente.
+- Estratégia de interrupção por falha (`fail_fast`).
+- Contexto compartilhado da execução.
+- Eventos e rastreamento operacional.
+
+A execução híbrida, combinando etapas sequenciais e paralelas, não faz parte da versão 0.1.0.
+
+---
+
+## Memória persistente
+
+O módulo de memória permite armazenar informações operacionais em PostgreSQL.
+
+A implementação utiliza persistência assíncrona e separação de escopos.
+
+Entre os recursos estão:
+
+- Persistência de memórias.
+- Recuperação de informações.
+- Isolamento por escopo.
+- Metadados.
+- Separação por usuário, agente e organização.
+- Exclusão autorizada.
+- Encerramento dos recursos de conexão.
+
+A memória operacional não representa treinamento ou ajuste dos pesos do modelo.
+
+Ela permite que informações sejam armazenadas e recuperadas durante diferentes execuções, de acordo com as regras de escopo e autorização.
+
+**Importante:** o armazenamento de memória é explícito. A biblioteca não salva automaticamente todas as conversas sem uma operação definida pela aplicação.
+
+---
+
+## Knowledge e RAG
+
+O módulo Knowledge disponibiliza uma camada de gerenciamento de conhecimento e recuperação contextual.
+
+O fluxo de recuperação utiliza:
+
+1. Entrada de uma consulta.
+2. Geração ou utilização de embeddings.
+3. Busca vetorial.
+4. Aplicação dos filtros de escopo.
+5. Retorno dos documentos relevantes.
+
+### Componentes
+
+**KnowledgeService**
+
+Responsável pela interface de consulta ao conhecimento.
+
+**Chunking**
+
+Responsável pela divisão de conteúdos em partes menores para processamento e recuperação.
+
+**Reader**
+
+Responsável pela leitura de conteúdos suportados pela implementação.
+
+**Embeddings**
+
+Camada responsável pela geração de representações vetoriais.
+
+**PgVector**
+
+Implementação de armazenamento vetorial utilizando PostgreSQL e pgvector.
+
+### Isolamento de conhecimento
+
+As consultas podem considerar:
+
+- `tenant_id`
+- `agent_id`
+- `user_id`
+
+O contexto operacional também é utilizado para garantir que a consulta respeite o escopo da execução.
+
+O objetivo é evitar que informações privadas de um usuário ou organização sejam retornadas para outro contexto.
+
+---
+
+## Ferramentas e MCP
+
+O LKThink Agent possui uma camada própria de registro e execução de ferramentas.
+
+### Tool Registry
+
+Permite:
+
+- Registrar ferramentas.
+- Consultar ferramentas disponíveis.
+- Executar operações síncronas e assíncronas.
+- Adaptar ferramentas para integração com o Agno.
+- Controlar permissões de utilização.
+
+### Model Context Protocol (MCP)
+
+O módulo MCP permite integrar servidores externos que disponibilizam ferramentas por meio do protocolo MCP.
+
+A arquitetura contempla:
+
+- Conexões STDIO.
+- Conexões HTTP.
+- Descoberta de ferramentas.
+- Registro de ferramentas.
+- Permissões por agente.
+- Execução controlada.
+
+O objetivo é permitir que agentes utilizem recursos externos sem acoplar diretamente sua implementação aos serviços integrados.
+
+---
+
+## Observabilidade
+
+A observabilidade permite acompanhar o comportamento operacional dos agentes e das equipes.
+
+O contexto de observabilidade trabalha com identificadores como:
 
 - `trace_id`
 - `run_id`
 - `span_id`
+- `parent_span_id`
 - `tenant_id`
-- `agent_id`
-- `user_id`
-- `session_id`
+- `agent`
+- `component`
+- `operation`
 
-O isolamento deverá funcionar mesmo com múltiplas execuções concorrentes.
+Os eventos permitem identificar o início e o encerramento de operações, acompanhar execuções e relacionar diferentes etapas de uma mesma operação.
 
-**Status:** Implementação principal existente.
+### PostgreSQL Exporter
 
-Pendente:
-- Testes de concorrência entre agentes.
-- Testes de isolamento de ContextVar.
-- Validação de ausência de vazamento de contexto.
-- Testes de integração com agentes e provedores reais.
+O exporter PostgreSQL permite persistir eventos de observabilidade no banco de dados.
 
-# 7. Providers
+A implementação contempla:
 
-A camada Providers deverá abstrair os serviços de modelos de linguagem e embeddings.
-
-## Implementação inicial
-
-- DeepSeek para LLM.
-- Jina para embeddings.
-
-## Requisitos
-
-- Interface comum para provedores.
-- Configuração independente por agente.
-- Possibilidade de adicionar novos provedores.
-- Controle de parâmetros do modelo.
-- Tratamento de erros.
-- Controle de timeout.
-- Normalização dos resultados.
-- Métricas de tokens e custos quando disponibilizadas pelo provedor.
-
-**Status:** Estrutura arquitetural definida.
-
-Pendente:
-- Validar criação de agente com DeepSeek.
-- Executar chamadas reais.
-- Validar retorno e métricas.
-- Validar tratamento de falhas.
-- Integrar o provider com o runtime.
-
-# 8. Memory e Knowledge/RAG
-
-## 8.1 Memory
-
-A memória será operacional, persistente e separada do treinamento do modelo.
-
-Escopos previstos:
-
-- Agente.
-- Usuário.
-- Sessão.
-
-A recuperação deverá respeitar os limites de contexto configurados.
-
-A gravação será explícita, por meio de operações como `remember()`.
-
-Não haverá gravação automática de todas as conversas inicialmente.
-
-**Pendente de validação:** persistência e recuperação PostgreSQL ponta a ponta, isolamento de dados e testes de falha.
-
-## 8.2 Knowledge/RAG
-
-O módulo Knowledge deverá permitir:
-
-- Ingestão de documentos.
-- Extração e processamento de conteúdo.
-- Divisão em chunks.
-- Geração de embeddings com Jina.
-- Armazenamento no PostgreSQL com pgvector.
-- Busca por similaridade.
-- Recuperação contextual.
-- Associação de conhecimento aos agentes.
-
-O RAG deverá funcionar de forma independente do provedor de LLM.
-
-**Infraestrutura validada:** PostgreSQL 17 e pgvector 0.8.7.
-
-**Pendente:**
-- Fluxo completo de ingestão.
-- Indexação vetorial.
-- Recuperação semântica.
-- Integração com o contexto do agente.
-- Testes de isolamento por agente e tenant.
-
-# 9. Tools e MCP
-
-O sistema deverá permitir ferramentas locais e ferramentas externas via MCP.
-
-## Tools
-
-- Registro de ferramentas.
-- Execução controlada.
-- Isolamento por agente.
-- Compartilhamento explícito.
-- Observação de execução.
-- Tratamento de falhas.
-
-## MCP
-
-- Conexão com servidores MCP.
-- Descoberta de ferramentas.
-- Lista de ferramentas permitidas.
-- Registro no agente.
-- Encerramento de conexões.
-- Compartilhamento sob demanda.
-
-**Status:** Estrutura e integração MCP existentes.
-
-**Pendente:**
-- Integração HTTP completa.
-- Testes de reconexão.
-- Testes de indisponibilidade.
-- Políticas de timeout e falhas.
-- Validação de ciclo de vida e compartilhamento.
-
-# 10. Observabilidade
-
-A observabilidade deverá ser parte nativa do runtime.
-
-Componentes:
-
-- EventLogger.
-- MetricsRegistry.
-- Tracer.
-- ToolExecutionObserver.
-- Contexto de execução.
-
-Eventos importantes:
-
-- Início e conclusão de execução.
-- Falha de execução.
-- Início e conclusão de ferramenta.
-- Recuperação de memória.
-- Persistência de memória.
-- Falhas de integração.
-
-## Persistência PostgreSQL
-
-O exportador PostgreSQL foi implementado e validado.
-
-Validações realizadas:
-- Conexão com PostgreSQL.
+- Conexão por URL ou engine SQLAlchemy.
+- Verificação de conexão.
+- Inicialização controlada.
 - Persistência de eventos.
-- Recuperação de eventos.
-- Armazenamento de metadata JSONB.
-- Armazenamento de payload JSONB.
-- Emissão pelo EventLogger.
-- Teste em container independente.
+- Metadados estruturados em JSONB.
 
-**Status:** Marco de persistência PostgreSQL validado.
-
-Pendente:
-- Cobertura ampliada de falhas.
-- Testes de concorrência.
-- Verificação de comportamento em produção.
-- Integração de toda a telemetria ponta a ponta.
-
-# 11. API, Docker e distribuição
-
-## 11.1 API HTTP
-
-A API será uma camada independente sobre o Core.
-
-Tecnologia: FastAPI.
-
-Funcionalidades previstas:
-- Gerenciamento de agentes.
-- Execução de agentes.
-- Respostas em streaming.
-- Controle de sessões.
-- Autenticação e autorização.
-- Identificação de tenants.
-- Health checks.
-- Observabilidade.
-
-A API não deverá duplicar a lógica do runtime.
-
-**Status:** Pendente de implementação e validação completa.
-
-## 11.2 Docker
-
-A biblioteca deverá funcionar em aplicações containerizadas.
-
-A API deverá possuir container próprio e compartilhar o Core com a biblioteca Python.
-
-Requisitos:
-- Dockerfile.
-- Docker Compose.
-- PostgreSQL.
-- pgvector.
-- Configuração por variáveis de ambiente.
-- Health checks.
-- Persistência de dados.
-- Inicialização e encerramento controlados.
-
-**Validado:** imagem de verificação do pacote, imports públicos, conexão PostgreSQL, pgvector e persistência de eventos.
-
-**Pendente:** Docker independente da API e validação de implantação completa.
-
-## 11.3 Distribuição
-
-O pacote deverá ser distribuível por PyPI.
-
-Requisitos:
-- `pyproject.toml`.
-- Build de wheel.
-- Build de sdist.
-- Instalação em ambiente limpo.
-- Imports públicos.
-- Dependências corretas.
-- Documentação.
-- Versionamento semântico.
-- Publicação e instalação via PyPI.
-
-**Validado:** build e instalação de wheel em ambiente Docker isolado.
-
-**Pendente:** validação completa do sdist, instalação final, documentação e publicação no PyPI.
-
-# 12. Roadmap, critérios de aceite e acompanhamento
-
-## 12.1 Marcos concluídos
-
-- [x] Estrutura modular inicial.
-- [x] Biblioteca instalável em modo editável.
-- [x] Motor Agno integrado como dependência interna.
-- [x] API pública com imports verificados.
-- [x] PostgreSQL conectado.
-- [x] pgvector disponível.
-- [x] Exportador PostgreSQL de observabilidade validado.
-- [x] Persistência e leitura de eventos validadas.
-- [x] AgentConfig validado.
-- [x] AgentManager validado.
-- [x] Testes de ciclo de vida do AgentManager.
-- [x] Ruff aprovado.
-- [x] Wheel instalado em container independente.
-
-## 12.2 Pendências prioritárias
-
-### Fase 1 — Isolamento e integração do runtime
-- [ ] Testes concorrentes de ContextVar.
-- [ ] Isolamento de tenant, agente, usuário e sessão.
-- [ ] Integração real AgentManager + AgentRuntime + LKThinkAgent.
-- [ ] Execução real com DeepSeek.
-- [ ] Validação de métricas e resultados do provider.
-
-### Fase 2 — Memória e conhecimento
-- [ ] Validar MemoryService com PostgreSQL.
-- [ ] Validar persistência e recuperação de memória.
-- [ ] Concluir ingestão de documentos.
-- [ ] Concluir embeddings Jina.
-- [ ] Implementar busca vetorial.
-- [ ] Integrar RAG ao agente.
-
-### Fase 3 — Ferramentas e integrações
-- [ ] Finalizar MCP HTTP.
-- [ ] Validar reconexão e falhas.
-- [ ] Validar isolamento e compartilhamento de ferramentas.
-- [ ] Testar execução de ferramentas com agentes reais.
-
-### Fase 4 — API e infraestrutura
-- [ ] Implementar API FastAPI.
-- [ ] Implementar streaming.
-- [ ] Implementar autenticação e autorização.
-- [ ] Implementar isolamento de tenants na API.
-- [ ] Criar Docker independente da API.
-- [ ] Validar Docker Compose completo.
-
-### Fase 5 — Qualidade e distribuição
-- [ ] Testes de integração ponta a ponta.
-- [ ] Testes de segurança.
-- [ ] Ampliar cobertura de testes.
-- [ ] Validar wheel e sdist.
-- [ ] Documentação de instalação e uso.
-- [ ] Exemplos funcionais.
-- [ ] Publicação no PyPI.
-
-## 12.3 Critérios finais de aceite
-
-O projeto será considerado pronto para a primeira versão quando:
-
-1. Uma aplicação conseguir instalar e importar a biblioteca.
-2. Conseguir criar múltiplos agentes especializados.
-3. Executar agentes com provedores reais.
-4. Executar agentes simultaneamente sem mistura de contexto.
-5. Utilizar ferramentas locais e MCP.
-6. Recuperar conhecimento por RAG.
-7. Persistir e recuperar memória com isolamento.
-8. Registrar eventos, métricas e rastreamento.
-9. Disponibilizar API HTTP com streaming e autenticação.
-10. Executar a infraestrutura por Docker.
-11. Passar nos testes automatizados e verificações estáticas.
-12. Ser distribuível e instalável pelo PyPI.
+A observabilidade é parte da arquitetura do framework, não apenas um mecanismo de logging.
 
 ---
 
-## Acompanhamento geral
+## Isolamento de contexto
 
-| Área | Situação |
-|---|---|
-| Arquitetura e estrutura | Implementada |
-| AgentConfig / AgentManager | Validado |
-| Runtime | Implementado; concorrência pendente |
-| Providers | Integração real pendente |
-| Memory | Integração final pendente |
-| Knowledge/RAG | Integração pendente |
-| Tools | Parcial |
-| MCP | Parcial |
-| Observabilidade PostgreSQL | Validada |
-| API FastAPI | Pendente |
-| Docker da biblioteca | Validado |
-| Docker da API | Pendente |
-| Distribuição | Parcial |
-| Testes finais e segurança | Pendentes |
+O Runtime utiliza `ContextVar` para propagar informações de execução sem depender de variáveis globais compartilhadas.
 
-**Progresso estimado: 72% concluído — 28% restante.**
+Cada execução pode possuir seu próprio contexto:
 
-A estimativa será atualizada conforme cada marco passar pelos respectivos critérios de aceite. Implementação sem teste de integração não será contabilizada como concluída.
+```text
+Execução A
+├── tenant_id
+├── agent_id
+├── user_id
+├── session_id
+└── run_id
 
-**Próximo marco obrigatório:** comprovar isolamento de contexto em execuções concorrentes no AgentRuntime compartilhado.
+Execução B
+├── tenant_id
+├── agent_id
+├── user_id
+├── session_id
+└── run_id
+```
+
+Essa abordagem permite executar agentes simultaneamente sem misturar os dados operacionais de diferentes solicitações.
+
+O contexto é restaurado ao final da execução, inclusive quando ocorre uma exceção.
+
+---
+
+## Testes
+
+O projeto utiliza Pytest para validar seus componentes.
+
+Execute a suíte:
+
+```bash
+python -m pytest -q
+```
+
+Execute a verificação estática:
+
+```bash
+python -m ruff check src tests
+```
+
+Execute o build:
+
+```bash
+python -m build
+```
+
+Verifique as dependências:
+
+```bash
+python -m pip check
+```
+
+Os testes contemplam componentes como:
+
+- Gerenciamento de agentes.
+- Runtime.
+- Isolamento de contexto.
+- Concorrência.
+- Observabilidade.
+- Memória.
+- Knowledge e RAG.
+- Ferramentas.
+- MCP.
+- Orquestração.
+- Integração real com DeepSeek, quando configurada.
+
+---
+
+## Build e distribuição
+
+O projeto utiliza o padrão de empacotamento Python.
+
+Para gerar os artefatos:
+
+```bash
+python -m build
+```
+
+Os arquivos são gerados no diretório:
+
+```text
+dist/
+├── lkthink_agent-0.1.0.tar.gz
+└── lkthink_agent-0.1.0-py3-none-any.whl
+```
+
+Valide os artefatos:
+
+```bash
+python -m twine check dist/*
+```
+
+Para publicar uma nova versão:
+
+```bash
+python -m twine upload dist/*
+```
+
+A publicação é feita no PyPI e exige credenciais de publicação válidas.
+
+---
+
+## Atualizações e versionamento
+
+O LKThink Agent utiliza versionamento semântico (Semantic Versioning).
+
+O formato segue:
+
+```text
+MAJOR.MINOR.PATCH
+```
+
+Exemplo:
+
+```text
+0.1.0
+```
+
+| Tipo | Quando utilizar | Exemplo |
+|---|---|---|
+| PATCH | Correções compatíveis | 0.1.0 → 0.1.1 |
+| MINOR | Novas funcionalidades compatíveis | 0.1.0 → 0.2.0 |
+| MAJOR | Mudanças incompatíveis | 0.1.0 → 1.0.0 |
+
+### Como atualizar a biblioteca
+
+Para atualizar para a versão mais recente:
+
+```bash
+pip install --upgrade lkthink-agent
+```
+
+Para instalar uma versão específica:
+
+```bash
+pip install lkthink-agent==0.1.0
+```
+
+Para atualizar incluindo as integrações:
+
+```bash
+pip install --upgrade "lkthink-agent[postgres,knowledge,mcp,api]"
+```
+
+### Como publicar uma nova versão
+
+O processo recomendado é:
+
+1. Atualizar o código.
+2. Atualizar ou criar testes.
+3. Executar a suíte de testes.
+4. Executar o Ruff.
+5. Atualizar a versão no `pyproject.toml`.
+6. Gerar os artefatos.
+7. Validar os artefatos com Twine.
+8. Publicar no PyPI.
+9. Criar uma tag correspondente no Git.
+
+Exemplo de alteração no `pyproject.toml`:
+
+```toml
+[project]
+name = "lkthink-agent"
+version = "0.1.1"
+```
+
+Execute as verificações:
+
+```bash
+python -m pytest -q
+python -m ruff check src tests
+python -m pip check
+```
+
+Remova os artefatos antigos e gere os novos:
+
+```powershell
+Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+python -m build
+python -m twine check dist/*
+```
+
+Publique:
+
+```bash
+python -m twine upload dist/*
+```
+
+Crie a tag da versão:
+
+```bash
+git add .
+git commit -m "release: v0.1.1"
+git tag v0.1.1
+git push origin main
+git push origin v0.1.1
+```
+
+**Importante:** uma versão já publicada no PyPI não pode ser sobrescrita. Para qualquer correção ou melhoria, publique um novo número de versão.
+
+---
+
+## Roadmap
+
+O LKThink Agent está em desenvolvimento contínuo.
+
+### Documentação e experiência de desenvolvimento
+
+- [ ] Documentação completa da API pública.
+- [ ] Exemplos executáveis de criação de agentes.
+- [ ] Exemplos de integração com DeepSeek.
+- [ ] Exemplos de memória persistente.
+- [ ] Exemplos de Knowledge e RAG.
+- [ ] Exemplos de integração MCP.
+- [ ] Exemplos completos de equipes multiagentes.
+
+### Ecossistema
+
+- [ ] Projeto demonstrativo independente utilizando o pacote via PyPI.
+- [ ] Novos provedores de LLM.
+- [ ] Novos provedores de embeddings.
+- [ ] Expansão dos mecanismos de armazenamento.
+- [ ] Estratégias avançadas de recuperação de conhecimento.
+
+### Engenharia e operação
+
+- [ ] CI com GitHub Actions.
+- [ ] Pipeline automatizado de testes.
+- [ ] Publicação automatizada de releases.
+- [ ] Painel de observabilidade.
+- [ ] Métricas de custo e consumo de tokens.
+- [ ] Estratégias avançadas de execução e recuperação de falhas.
+
+---
+
+## Contribuição
+
+Contribuições são bem-vindas.
+
+Antes de enviar alterações:
+
+1. Execute os testes.
+2. Verifique a qualidade do código com Ruff.
+3. Documente novas funcionalidades.
+4. Adicione testes para comportamentos novos ou modificados.
+5. Evite introduzir dependências obrigatórias desnecessárias.
+
+---
+
+## Licença
+
+Este projeto utiliza a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para conhecer os termos de utilização.
+
+---
+
+**LKThink Agent — Modular Agent Engineering.**
+
+Uma base extensível para construir, executar e orquestrar sistemas inteligentes.

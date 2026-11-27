@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from lkthink_agent.agents.agent import LKThinkAgent
+from lkthink_agent.agents.abstractions import AgentProtocol
 
 if TYPE_CHECKING:
     from lkthink_agent.execution.runtime import AgentResult, AgentRuntime
@@ -20,13 +20,23 @@ class AgentManager:
             runtime = AgentRuntime()
 
         self.runtime = runtime
-        self._agents: dict[str, LKThinkAgent] = {}
+        self._agents: dict[str, AgentProtocol] = {}
         self._aliases: dict[str, str] = {}
 
-    def register(self, agent: LKThinkAgent) -> LKThinkAgent:
-        if not isinstance(agent, LKThinkAgent):
+    def register(self, agent: AgentProtocol) -> AgentProtocol:
+        if not hasattr(agent, "identity"):
             raise TypeError(
-                "O agente precisa ser uma instância de LKThinkAgent."
+                "O agente precisa possuir uma identidade válida."
+            )
+
+        if not callable(getattr(agent, "executar", None)):
+            raise TypeError(
+                "O agente precisa implementar executar()."
+            )
+
+        if not callable(getattr(agent, "close", None)):
+            raise TypeError(
+                "O agente precisa implementar close()."
             )
 
         identity = agent.identity
@@ -64,7 +74,7 @@ class AgentManager:
 
         return agent
 
-    def get(self, identifier: str) -> LKThinkAgent:
+    def get(self, identifier: str) -> AgentProtocol:
         if not isinstance(identifier, str) or not identifier.strip():
             raise ValueError("Informe o ID ou slug do agente.")
 
@@ -77,7 +87,7 @@ class AgentManager:
 
         return agent
 
-    def remove(self, identifier: str) -> LKThinkAgent:
+    def remove(self, identifier: str) -> AgentProtocol:
         """
         Remove o agente do registro sem encerrar seus recursos.
 
@@ -95,7 +105,7 @@ class AgentManager:
     async def remove_and_close(
         self,
         identifier: str,
-    ) -> LKThinkAgent:
+    ) -> AgentProtocol:
         """Fecha os recursos do agente e depois o remove do registro."""
         agent = self.get(identifier)
 
@@ -137,7 +147,7 @@ class AgentManager:
                 errors,
             )
 
-    def list_agents(self) -> tuple[LKThinkAgent, ...]:
+    def list_agents(self) -> tuple[AgentProtocol, ...]:
         return tuple(self._agents.values())
 
     async def execute(

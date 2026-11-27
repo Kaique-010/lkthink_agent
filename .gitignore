@@ -106,3 +106,5 @@ pnpm-debug.log*
 # --- Documentation generated locally ---
 docs/_build/
 site/
+.pytest_cache/
+
